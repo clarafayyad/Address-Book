@@ -41,6 +41,78 @@
 
         <hr>
 
+        <div class="row">
+            <div class="form-group col-md-3">
+                <select class="form-control" name="entityType" v-model="searchEntity.type">
+                    <option value="all">All</option>
+                    <option value="firstName">First name</option>
+                    <option value="lastName">Last name</option>
+                    <option value="job">Job</option>
+                    <option value="address">Address</option>
+                    <option value="email">Email</option>
+                </select>
+            </div>
+            <div class="form-group col-md-6">
+                <input :disabled="searchEntity.type=='all'" class="form-control" type="text" placeholder="Search" v-model="searchEntity.searchQuery" required/>
+            </div>
+            <div class="col-md-3">
+                <b-button id="searchButton" variant="info" :disabled="searchIsDisabled" v-on:click="search(1)">
+                    Search
+                    <b-spinner small v-if="searchIsDisabled" label="spinning"></b-spinner>
+                </b-button>
+            </div>
+            <div class="col-md-12">
+                <p class="text-danger">{{searchErrorMessage}}</p>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+            <div class="col-md-12">
+                <h3>Contacts</h3>
+            </div>
+            <div class="col-md-12 settings-table">
+                <div v-if="isLoading" class="d-flex justify-content-center mb-3">
+                    <b-spinner style="width: 5rem; height: 5rem;" type="grow"></b-spinner>
+                </div>
+                <table v-else class="table">
+                    <thead>
+                        <th class="imageColumn"></th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>PhoneNumber</th>
+                        <th>Email</th>
+                        <th>Address</th>
+                        <th>Job</th>
+                        <th>Actions</th>
+                    </thead>
+                    <tbody>
+                     <tr v-for="item in this.contacts" v-bind:key="item.id">
+                         <td class="imageColumn">
+                             <b-img  class="contactImage" v-bind:src="item.imageSrc"  rounded="circle" alt="Circle image"></b-img>
+                         </td>
+                         <td>{{item.id}}</td>
+                         <td>{{item.name}}</td>
+                         <td>{{item.phoneNumber}}</td>
+                         <td>{{item.email}}</td>
+                         <td>{{item.address}}</td>
+                         <td>{{item.job}}</td>
+                         <td>
+                         </td>
+                     </tr>
+                    </tbody>
+                </table>
+
+                <b-pagination
+                  v-model="currentPage"
+                  :total-rows="rows"
+                  :per-page="perPage"
+                  v-on:click.native="changePage()"
+                  align="right"
+                ></b-pagination>
+            </div>
+        </div>
     </div>
 </template>
 <script>
@@ -52,17 +124,41 @@
         name: "address_book",
         mounted() {
             // when the component has loaded
+            this.isLoading        = false;
             this.addIsDisabled    = false;
+            this.searchIsDisabled = false
+
+            this.searchEntity.type = 'all';
+            this.isSearching = false;
+
+            this.getAllContacts();
         },
         data: () => {
             return {
+                isLoading : '',
+                isSearching: '',
                 addIsDisabled:'',
+                searchIsDisabled:'',
                 errorMessage: '',
-                newContact: {FirstName: '', LastName: '', PhoneNumber: '', Address: '', JobTitle: '', Email: ''},
+                searchErrorMessage:'',
                 contacts: [],
+                newContact: {FirstName: '', LastName: '', PhoneNumber: '', Address: '', JobTitle: '', Email: ''},
+                searchEntity: {type: '', searchQuery:''},
+                perPage: 10,
+                currentPage: 1,
+                rows: 0,
             }
         },
         methods: {
+            changePage() {
+                this.search(this.currentPage);
+            },
+            getAllContacts(){
+                this.searchEntity.searchQuery = '';
+                this.searchEntity.type= 'all';
+                this.currentPage = 1;
+                this.search(this.currentPage);
+            },
             addContact(){
                 this.errorMessage = '';
 
@@ -117,6 +213,19 @@
                                 return;
                             }
                             miniToastr.success("Contact added successfully", 'Success');
+                            if(this.matchSearchCriteria(firstName, lastName, job, address, email)){
+                                this.contacts.unshift({id: response.data.id,
+                                                             name: firstName + " " +lastName,
+                                                             phoneNumber: phoneNumber,
+                                                             email: email,
+                                                             job: job,
+                                                             address:address,
+                                                             imageSrc: 'https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-ios7-contact-outline-512.png',
+                                });
+                            }else{
+                                this.getAllContacts();
+                                this.emptySearchingDetails();
+                            }
                         }else {
                             miniToastr.error('Could not add Contact', 'Error');
                         }
@@ -128,6 +237,67 @@
                     console.log(error);
                     this.emptyNewContactDetails();
                 });
+            },
+            search(page){
+                this.currentPage = page;
+
+                if(this.searchEntity.type == 'all'){
+                    this.emptySearchingDetails();
+                }else {
+                    this.isSearching = true;
+                }
+
+                this.searchErrorMessage = ''
+                this.contacts           = [];
+                this.isLoading          = true;
+
+                axios({
+                    url: "http://localhost/addressbook/API/GETContacts.php",
+                    method: 'get',
+                    params: {
+                        pageNumber:  page,
+                        searchQuery: this.searchEntity.searchQuery,
+                        type:        this.searchEntity.type,
+                        isSearching: this.isSearching,
+                    }
+                }).then(response => {
+                    this.isLoading   = false;
+                    if(response.statusText == "OK"){
+                        this.contacts    = response.data.data;
+                        this.rows        = response.data.count;
+                        miniToastr.success('Contacts loaded successfully', 'Success');
+                    }else{
+                        miniToastr.error("Could not get results", "Error");
+                    }
+                    return response;
+                })
+                .catch((error) => {
+                    this.isLoading = false;
+                    console.log(error);
+                    miniToastr.error("Could not get results", "Error");
+                });
+            },
+            emptySearchingDetails(){
+              this.isSearching = false;
+              this.searchEntity.type = 'all';
+              this.searchEntity.searchQuery  = '';
+            },
+            matchSearchCriteria(firstName, lastName, job, address, email){
+                let query = this.searchEntity.searchQuery.toLowerCase();
+                switch(this.searchEntity.type){
+                    case 'all':
+                        return true;
+                    case 'firstName':
+                        return (firstName.toLowerCase()).includes(query);
+                    case 'lastName':
+                        return (lastName.toLowerCase()).includes(query);
+                    case 'job':
+                        return (job.toLowerCase()).includes(query);
+                    case 'address':
+                        return (address.toLowerCase()).includes(query);
+                    case 'email':
+                        return (email.toLowerCase()).includes((query));
+                }
             },
             emptyNewContactDetails(){
                 this.newContact.FirstName   = '';
@@ -145,5 +315,22 @@
     .spinner-border {
         height: 15px;
         width: 15px;
+    }
+    .page-item.active .page-link {
+    background-color: grey !important;
+    border-color: grey !important;
+    }
+    
+    .contactImage{
+        width: 50px;
+        height: 50px;
+    }
+
+    .imageColumn{
+        width: 1px;
+        height: 1px;
+    }
+    #searchButton{
+        width: 115px;
     }
 </style>
