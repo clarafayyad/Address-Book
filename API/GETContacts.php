@@ -4,6 +4,9 @@ error_reporting(E_ERROR | E_PARSE);
 require('Response.php');
 require('includeHeaders.php');
 
+//max number of records to select for pagination purposes
+const MAX_RECORDS_PER_PAGE = 10;
+
 //validate input
 $inputValidationConditions =!isset($_GET['searchQuery']) ||
                             !isset($_GET['type']) ||
@@ -42,7 +45,6 @@ require('connectToDatabase.php');
 $query = "%{$searchQuery}%";
 
 //calculate offset to select only few rows from Contact table for pagination
-const MAX_RECORDS_PER_PAGE = 10;
 $offset          = ($pageNumber - 1) * MAX_RECORDS_PER_PAGE;
 $numberOfRecords = MAX_RECORDS_PER_PAGE;
 
@@ -51,7 +53,7 @@ $mainQuery = "SELECT c.ContactId, c.FirstName, c.LastName, c.PhoneNumber, c.JobT
               FROM Contact c, Image i 
               WHERE (c.ContactId = i.contactID)";
 $limitQuery = " LIMIT ?,? ";
-$orderby = ' ORDER BY LastName ASC';
+$orderby = ' ORDER BY CONCAT(FirstName, " ", LastName) ASC';
 $condition = '';
 
 //add string matching condition for search
