@@ -102,6 +102,9 @@
                              <a v-on:click="deleteContact(item.id)">
                                  <i class="fa fa-trash"></i>
                              </a>
+                             <a v-on:click="showModal(item.id, item.name, item.imageSrc, item.phoneNumber)">
+                                 <i class="fa fa-cog"></i>
+                             </a>
                          </td>
                      </tr>
                     </tbody>
@@ -115,6 +118,34 @@
                   align="right"
                 ></b-pagination>
             </div>
+
+             <b-modal  size="xl" ok-only ok-variant="secondary" ok-title="Cancel" ref="my-modal" id="modal-center" centered title="Contact Details" large>
+                 <table>
+                     <tr>
+                         <td>
+                             <b-img  class="contactImage" v-bind:src="selectedContact.image"  rounded="circle" alt="Circle image"></b-img>
+                         </td>
+                         <td>
+                             <h3>{{this.selectedContact.name}}</h3>
+                         </td>
+                     </tr>
+                 </table>
+                 <hr>
+                 <p>Update Phone Number:</p>
+                <div class="row">
+                    <div class="form-group col-md-4">
+                        <input class="form-control" type="text" v-model="selectedContact.newPhoneNumber" required/>
+                    </div>
+                    <div class="col-md-3">
+                        <button :disabled="updateIsDisabled" class="btn btn-secondary" v-on:click="updateContact">
+                            Update Contact
+                            <b-spinner small v-if="updateIsDisabled" label="spinning"></b-spinner>
+                        </button>
+                    </div>
+                </div>
+                 <p class="text-danger">{{modalErrorMessage}}</p>
+             </b-modal>
+
         </div>
     </div>
 </template>
@@ -130,6 +161,7 @@
             this.isLoading        = false;
             this.addIsDisabled    = false;
             this.deleteIsDisabled = false;
+            this.updateIsDisabled = false;
             this.searchIsDisabled = false
             this.isSearching      = false;
 
@@ -143,11 +175,14 @@
                 isSearching: '',
                 addIsDisabled:'',
                 deleteIsDisabled:'',
+                updateIsDisabled:'',
                 searchIsDisabled:'',
                 errorMessage: '',
+                modalErrorMessage: '',
                 searchErrorMessage:'',
                 contacts: [],
                 newContact: {FirstName: '', LastName: '', PhoneNumber: '', Address: '', JobTitle: '', Email: ''},
+                selectedContact: {id: '',image:'', name:'', oldPhoneNumber: '', newPhoneNumber: ''},
                 searchEntity: {type: '', searchQuery:''},
                 perPage: 10,
                 currentPage: 1,
@@ -160,7 +195,7 @@
             },
             getAllContacts(){
                 this.searchEntity.searchQuery = '';
-                this.searchEntity.type= 'all';
+                this.searchEntity.type = 'all';
                 this.currentPage = 1;
                 this.search(this.currentPage);
             },
@@ -236,6 +271,7 @@
                         }
                         this.emptyNewContactDetails();
                         return response;
+
                 }).catch( (error) => {
                     this.addIsDisabled = false;
                     miniToastr.error("Could not add contact", 'Error');
@@ -264,6 +300,54 @@
                 }).catch( (error) => {
                     this.isLoading = false;
                     miniToastr.error("Could not delete contact", 'Error');
+                    console.log(error);
+                });
+            },
+            updateContact(){
+                this.modalErrorMessage = '';
+
+                if(this.selectedContact.newPhoneNumber.length == 0){
+                    this.modalErrorMessage = 'Please specify the new phone number';
+                    return false;
+                }
+
+                if(this.selectedContact.newPhoneNumber == this.selectedContact.oldPhoneNumber){
+                    this.modalErrorMessage = 'Please enter a different phone number to update this contact';
+                    return false;
+                }
+
+                this.modalErrorMessage = '';
+                this.updateIsDisabled  = true;
+
+                axios({
+                    url: "http://localhost/addressbook/API/PATCHContact.php",
+                    params:
+                        {
+                            contactId: this.selectedContact.id,
+                            oldPhoneNumber: this.selectedContact.oldPhoneNumber,
+                            newPhoneNumber: this.selectedContact.newPhoneNumber,
+                        },
+                }).then(response => {
+                    if(response.statusText == 'OK') {
+                        if(response.data == "This number exists"){
+                            miniToastr.error("This number exists", 'Error');
+                        }else{
+                            let updateIndex = this.findIndex(this.contacts, this.selectedContact.id);
+                            this.contacts[updateIndex].phoneNumber = this.selectedContact.newPhoneNumber;
+                            miniToastr.success("Contact updated successfully", 'Success');
+                        }
+                    }
+
+                    this.updateIsDisabled = false;
+                    this.$refs['my-modal'].hide();
+                    this.clearModal();
+                    return response;
+
+                }).catch( (error) => {
+                    this.$refs['my-modal'].hide();
+                    this.updateIsDisabled = false;
+                    miniToastr.error("Could not update contact", 'Error');
+                    this.clearModal();
                     console.log(error);
                 });
             },
@@ -305,6 +389,23 @@
                     console.log(error);
                     miniToastr.error("Could not get results", "Error");
                 });
+            },
+            showModal(id, name, image, oldPhoneNumber){
+                this.selectedContact.id             = id;
+                this.selectedContact.name           = name;
+                this.selectedContact.image          = image;
+                this.selectedContact.oldPhoneNumber = oldPhoneNumber;
+                this.selectedContact.newPhoneNumber = oldPhoneNumber;
+                this.modalErrorMessage              = '';
+
+                this.$refs['my-modal'].show();
+            },
+            clearModal(){
+                this.selectedContact.id = '';
+                this.selectedContact.name = '';
+                this.selectedContact.image = '';
+                this.selectedContact.newPhoneNumber = '';
+                this.selectedContact.oldPhoneNumber = '';
             },
             emptySearchingDetails(){
               this.isSearching = false;
@@ -352,6 +453,7 @@
         height: 15px;
         width: 15px;
     }
+
     .page-item.active .page-link {
     background-color: grey !important;
     border-color: grey !important;
