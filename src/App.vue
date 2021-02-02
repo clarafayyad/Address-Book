@@ -99,6 +99,9 @@
                          <td>{{item.address}}</td>
                          <td>{{item.job}}</td>
                          <td>
+                             <a v-on:click="deleteContact(item.id)">
+                                 <i class="fa fa-trash"></i>
+                             </a>
                          </td>
                      </tr>
                     </tbody>
@@ -126,10 +129,11 @@
             // when the component has loaded
             this.isLoading        = false;
             this.addIsDisabled    = false;
+            this.deleteIsDisabled = false;
             this.searchIsDisabled = false
+            this.isSearching      = false;
 
             this.searchEntity.type = 'all';
-            this.isSearching = false;
 
             this.getAllContacts();
         },
@@ -138,6 +142,7 @@
                 isLoading : '',
                 isSearching: '',
                 addIsDisabled:'',
+                deleteIsDisabled:'',
                 searchIsDisabled:'',
                 errorMessage: '',
                 searchErrorMessage:'',
@@ -238,6 +243,30 @@
                     this.emptyNewContactDetails();
                 });
             },
+            deleteContact(id){
+                this.isLoading = true;
+
+                 axios({
+                    url: "http://localhost/addressbook/API/DELETEContact.php",
+                    params: { contactId: id,},
+                }).then(response => {
+                     if(response.statusText == 'OK') {
+                         let removeIndex = this.findIndex(this.contacts, id);
+                         this.contacts.splice(removeIndex,1);
+                         miniToastr.success("Contact deleted successfully", 'Success');
+                     }else{
+                         miniToastr.error("Could not delete contact", 'Error');
+                     }
+
+                    this.isLoading = false;
+                    return response;
+
+                }).catch( (error) => {
+                    this.isLoading = false;
+                    miniToastr.error("Could not delete contact", 'Error');
+                    console.log(error);
+                });
+            },
             search(page){
                 this.currentPage = page;
 
@@ -282,6 +311,13 @@
               this.searchEntity.type = 'all';
               this.searchEntity.searchQuery  = '';
             },
+            findIndex(list, target){
+                for(let i = 0; i<list.length; i++){
+                    if(list[i].id == target){
+                        return i;
+                    }
+                }
+            },
             matchSearchCriteria(firstName, lastName, job, address, email){
                 let query = this.searchEntity.searchQuery.toLowerCase();
                 switch(this.searchEntity.type){
@@ -320,7 +356,7 @@
     background-color: grey !important;
     border-color: grey !important;
     }
-    
+
     .contactImage{
         width: 50px;
         height: 50px;
@@ -330,6 +366,7 @@
         width: 1px;
         height: 1px;
     }
+
     #searchButton{
         width: 115px;
     }
