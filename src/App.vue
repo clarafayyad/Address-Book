@@ -144,6 +144,12 @@
                     </div>
                 </div>
                  <p class="text-danger">{{modalErrorMessage}}</p>
+                 <p>Change Image:</p>
+                 <div class="form-group col-md-12">
+                      <input type="file" id="file" ref="file" />
+                     <button class="btn btn-secondary" type="button" @click='uploadFile()'>Upload file</button>
+                </div>
+                 <hr>
              </b-modal>
 
         </div>
@@ -195,7 +201,7 @@
             },
             getAllContacts(){
                 this.searchEntity.searchQuery = '';
-                this.searchEntity.type = 'all';
+                this.searchEntity.type= 'all';
                 this.currentPage = 1;
                 this.search(this.currentPage);
             },
@@ -271,7 +277,6 @@
                         }
                         this.emptyNewContactDetails();
                         return response;
-
                 }).catch( (error) => {
                     this.addIsDisabled = false;
                     miniToastr.error("Could not add contact", 'Error');
@@ -390,6 +395,38 @@
                     miniToastr.error("Could not get results", "Error");
                 });
             },
+            uploadFile(){
+               this.file = this.$refs.file.files[0];
+
+               let formData = new FormData();
+               formData.append('file', this.file);
+               formData.append('contactId', this.selectedContact.id);
+
+               axios.post("http://localhost/addressbook/API/PATCHImage.php", formData,
+               {
+                  headers: {
+                    'Content-Type': 'multipart/form-data'
+                  }
+               })
+               .then(response => {
+                  if(!response.data){
+                     miniToastr.error("Could not update image", 'Error');
+                  }else{
+                      let index = this.findIndex(this.contacts, this.selectedContact.id);
+                      this.contacts[index].imageSrc = response.data.fileDestination;
+                      miniToastr.success("Image successfully updated", 'Success');
+                  }
+                   this.$refs['my-modal'].hide();
+                   this.clearModal();
+                   return response;
+               })
+               .catch(error => {
+                   console.log(error);
+                   miniToastr.error("Could not update image", 'Error');
+                   this.$refs['my-modal'].hide();
+                   this.clearModal();
+                   });
+            },
             showModal(id, name, image, oldPhoneNumber){
                 this.selectedContact.id             = id;
                 this.selectedContact.name           = name;
@@ -453,7 +490,6 @@
         height: 15px;
         width: 15px;
     }
-
     .page-item.active .page-link {
     background-color: grey !important;
     border-color: grey !important;
