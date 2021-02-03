@@ -25,7 +25,7 @@ $searchQuery = strtolower($_GET['searchQuery']);
 $isSearching = $_GET['isSearching'];
 
 //validate search type
-$validTypes = ['all', 'firstName', 'lastName', 'job', 'address', 'email'];
+$validTypes = ['all', 'firstName', 'lastName', 'phoneNumber', 'job', 'address', 'email'];
 if (!in_array($type, $validTypes)){
     returnMessage('wrong search type', 400);
     return;
@@ -64,6 +64,9 @@ if($isSearching == 'true') {
             break;
         case 'lastName':
             $condition = ' AND (LOWER(LastName) LIKE ? )';
+            break;
+        case 'phoneNumber':
+            $condition = ' AND PhoneNumber LIKE ?';
             break;
         case 'job':
             $condition = ' AND (LOWER(JobTitle) LIKE ? )';
