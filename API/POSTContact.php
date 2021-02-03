@@ -49,7 +49,7 @@ try {
             $lastID = $mysqli->insert_id;
 
             //set image for new contacts
-            $image = 'https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-ios7-contact-outline-512.png';
+            $image = 'http://localhost/addressbook/API/uploads/contact-icon.png';
 
             //insert in image table
             $stmt3->bind_param("ss", $image, $lastID);
