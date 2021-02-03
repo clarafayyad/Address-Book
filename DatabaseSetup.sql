@@ -1,0 +1,34 @@
+CREATE DATABASE addressbook;
+
+CREATE TABLE Contact(
+	ContactId INT NOT NULL AUTO_INCREMENT UNIQUE, 
+	FirstName VARCHAR(45) NOT NULL, 
+	LastName VARCHAR(45) NOT NULL,
+	PhoneNumber VARCHAR(45) NOT NULL UNIQUE, 
+	JobTitle VARCHAR(45), 
+	Address VARCHAR(100),
+	Email VARCHAR(45), 
+	PRIMARY KEY (ContactId)
+);
+
+CREATE TABLE Image (
+	ImageId INT NOT NULL AUTO_INCREMENT UNIQUE, 
+	ImagePath VARCHAR(300) NOT NULL, 
+    	ContactId INT NOT NULL UNIQUE,
+	PRIMARY KEY (ImageId),
+	FOREIGN KEY (ContactId) REFERENCES Contact(ContactId)
+);
+
+CREATE TABLE Relationship(
+	RelationshipId INT NOT NULL AUTO_INCREMENT UNIQUE, 
+	RelationshipType VARCHAR(45) NOT NULL,
+	FromContactId INT NOT NULL,
+	ToContactId INT NOT NULL,
+	PRIMARY KEY(RelationshipId),
+	FOREIGN KEY(FromContactId) REFERENCES Contact(ContactId),
+	FOREIGN KEY(ToContactId) REFERENCES Contact(ContactId)
+);
+
+
+
+
