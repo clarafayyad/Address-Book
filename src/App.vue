@@ -134,7 +134,7 @@
                  <hr>
                  <p>Change Phone Number:</p>
                 <div class="row">
-                    <div class="form-group col-md-4">
+                    <div class="form-group col-md-3">
                         <input class="form-control" type="text" v-model="selectedContact.newPhoneNumber" required/>
                     </div>
                     <div class="col-md-3">
@@ -148,7 +148,7 @@
                  <p>Change Image:</p>
                  <div class="form-group col-md-12">
                       <input type="file" id="file" ref="file" />
-                     <button class="btn btn-secondary" type="button" @click='uploadFile()'>Upload file</button>
+                     <button class="btn btn-secondary" type="button" @click='uploadFile()'>Upload File</button>
                 </div>
                  <hr>
                  <div class="row">
@@ -301,7 +301,7 @@
                                                              email: email,
                                                              job: job,
                                                              address:address,
-                                                             imageSrc: 'https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-ios7-contact-outline-512.png',
+                                                             imageSrc: 'http://localhost/addressbook/API/uploads/contact-icon.png',
                                 });
                             }else{
                                 this.getAllContacts();
@@ -475,6 +475,7 @@
                 this.selectedContact.oldPhoneNumber = oldPhoneNumber;
                 this.selectedContact.newPhoneNumber = oldPhoneNumber;
                 this.modalErrorMessage              = '';
+                this.addRelationshipError           = '';
 
                 axios({
                     url: "http://localhost/addressbook/API/GETRelationships.php",
@@ -501,11 +502,6 @@
 
                 let relationshipType  = this.newRelationship.type;
                 let relationshipContactId = this.newRelationship.contactId;
-
-                if(!relationshipType){
-                    this.addRelationshipError = 'Please enter the type';
-                    return;
-                }
 
                 if(!relationshipContactId){
                     this.addRelationshipError = 'Please enter the contact id';
@@ -539,14 +535,12 @@
                         }else {
                             miniToastr.error('Could not add relationship', 'Error');
                         }
-                        this.newRelationship.contactId = '';
-                        this.newRelationship.type = 'friend';
+                        this.emptyNewRelationshipDetails();
                         return response;
                 }).catch( (error) => {
                     miniToastr.error("Could not add relationship", 'Error');
                     console.log(error);
-                    this.newRelationship.contactId = '';
-                    this.newRelationship.type = 'friend';
+                    this.emptyNewRelationshipDetails();
                 });
             },
             clearModal(){
@@ -594,6 +588,11 @@
                 this.newContact.Email       = '';
                 this.newContact.Address     = '';
                 this.newContact.JobTitle    = '';
+            },
+            emptyNewRelationshipDetails(){
+                this.newRelationship.contactId = '';
+                this.newRelationship.type      = 'friend';
+                this.addRelationshipError      = '';
             }
         }
     }
@@ -627,4 +626,5 @@
     #deleteOption{
         padding-right: 10px;
     }
+
 </style>
