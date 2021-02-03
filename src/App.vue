@@ -47,6 +47,7 @@
                     <option value="all">All</option>
                     <option value="firstName">First name</option>
                     <option value="lastName">Last name</option>
+                    <option value="phoneNumber">Phone number</option>
                     <option value="job">Job</option>
                     <option value="address">Address</option>
                     <option value="email">Email</option>
@@ -99,7 +100,7 @@
                          <td>{{item.address}}</td>
                          <td>{{item.job}}</td>
                          <td>
-                             <a v-on:click="deleteContact(item.id)">
+                             <a v-on:click="deleteContact(item.id)" id="deleteOption">
                                  <i class="fa fa-trash"></i>
                              </a>
                              <a v-on:click="showModal(item.id, item.name, item.imageSrc, item.phoneNumber)">
@@ -131,7 +132,7 @@
                      </tr>
                  </table>
                  <hr>
-                 <p>Update Phone Number:</p>
+                 <p>Change Phone Number:</p>
                 <div class="row">
                     <div class="form-group col-md-4">
                         <input class="form-control" type="text" v-model="selectedContact.newPhoneNumber" required/>
@@ -150,6 +151,36 @@
                      <button class="btn btn-secondary" type="button" @click='uploadFile()'>Upload file</button>
                 </div>
                  <hr>
+                 <div class="row">
+                     <div class="col-md-12">
+                         <h4>Relationships</h4>
+                     </div>
+                     <div class="col-md-4">
+                         <input class="form-control" type="text" placeholder="Contact ID" v-model="newRelationship.contactId" required/>
+                     </div>
+                     <div class="col-md-4">
+                         <select class="form-control" name="entityType" v-model="newRelationship.type">
+                            <option value="friend">Friend</option>
+                            <option value="family">Family</option>
+                            <option value="spouse">Spouse</option>
+                            <option value="sibling">Sibling</option>
+                            <option value="colleague">Colleague</option>
+                            <option value="acquaintance">Acquaintance</option>
+                        </select>
+                     </div>
+                     <div class="col-md-4">
+                         <b-button variant="info" v-on:click="addRelationship()">Add Relationship</b-button>
+                     </div>
+                     <div class="col-md-12">
+                         <p class="text-danger">{{this.addRelationshipError}}</p>
+                     </div>
+                 </div>
+                 <hr>
+                 <div class="row">
+                     <div class="col-md-12">
+                         <b-table striped hover :items="modalRelationshipContacts"></b-table>
+                     </div>
+                 </div>
              </b-modal>
 
         </div>
@@ -171,7 +202,8 @@
             this.searchIsDisabled = false
             this.isSearching      = false;
 
-            this.searchEntity.type = 'all';
+            this.searchEntity.type    = 'all';
+            this.newRelationship.type = 'friend';
 
             this.getAllContacts();
         },
@@ -193,6 +225,9 @@
                 perPage: 10,
                 currentPage: 1,
                 rows: 0,
+                modalRelationshipContacts: '',
+                newRelationship:{ contactId: '', type: ''},
+                addRelationshipError: '',
             }
         },
         methods: {
@@ -201,7 +236,7 @@
             },
             getAllContacts(){
                 this.searchEntity.searchQuery = '';
-                this.searchEntity.type= 'all';
+                this.searchEntity.type = 'all';
                 this.currentPage = 1;
                 this.search(this.currentPage);
             },
@@ -259,7 +294,7 @@
                                 return;
                             }
                             miniToastr.success("Contact added successfully", 'Success');
-                            if(this.matchSearchCriteria(firstName, lastName, job, address, email)){
+                            if(this.matchSearchCriteria(firstName, lastName, phoneNumber, job, address, email)){
                                 this.contacts.unshift({id: response.data.id,
                                                              name: firstName + " " +lastName,
                                                              phoneNumber: phoneNumber,
@@ -277,6 +312,7 @@
                         }
                         this.emptyNewContactDetails();
                         return response;
+
                 }).catch( (error) => {
                     this.addIsDisabled = false;
                     miniToastr.error("Could not add contact", 'Error');
@@ -319,6 +355,12 @@
                 if(this.selectedContact.newPhoneNumber == this.selectedContact.oldPhoneNumber){
                     this.modalErrorMessage = 'Please enter a different phone number to update this contact';
                     return false;
+                }
+
+                let isNum = /^\d+$/.test(this.selectedContact.newPhoneNumber);
+                if(!isNum){
+                    this.modalErrorMessage = 'The phone number must only include digits';
+                    return;
                 }
 
                 this.modalErrorMessage = '';
@@ -383,7 +425,6 @@
                     if(response.statusText == "OK"){
                         this.contacts    = response.data.data;
                         this.rows        = response.data.count;
-                        miniToastr.success('Contacts loaded successfully', 'Success');
                     }else{
                         miniToastr.error("Could not get results", "Error");
                     }
@@ -435,7 +476,78 @@
                 this.selectedContact.newPhoneNumber = oldPhoneNumber;
                 this.modalErrorMessage              = '';
 
-                this.$refs['my-modal'].show();
+                axios({
+                    url: "http://localhost/addressbook/API/GETRelationships.php",
+                    method: 'get',
+                    params: {
+                        id:  id,
+                    }
+                }).then(response => {
+                    if(response.statusText == "OK"){
+                        this.modalRelationshipContacts  = response.data;
+                        this.$refs['my-modal'].show();
+                    }else{
+                        miniToastr.error("Could not get relationships", "Error");
+                    }
+                    return response;
+                })
+                .catch((error) => {
+                    console.log(error);
+                    miniToastr.error("Could not get relationships", "Error");
+                });
+            },
+            addRelationship(){
+                this.addRelationshipError = '';
+
+                let relationshipType  = this.newRelationship.type;
+                let relationshipContactId = this.newRelationship.contactId;
+
+                if(!relationshipType){
+                    this.addRelationshipError = 'Please enter the type';
+                    return;
+                }
+
+                if(!relationshipContactId){
+                    this.addRelationshipError = 'Please enter the contact id';
+                    return;
+                }
+
+                if(relationshipContactId == this.selectedContact.id){
+                    this.addRelationshipError = 'cannot add a relationship to this same contact';
+                    return;
+                }
+                axios({
+                    url: "http://localhost/addressbook/API/POSTRelationship.php",
+                    method: 'post',
+                    params:
+                        {
+                            type : relationshipType,
+                            fromId: this.selectedContact.id,
+                            toId: relationshipContactId,
+                        }
+                }).then(response => {
+                        if(response.statusText == 'OK') {
+                            if(response.data == 'this relationship exists' || response.data == 'this contact does not exist') {
+                                miniToastr.error(response.data, 'Error');
+                            }else{
+                                this.modalRelationshipContacts.unshift({RelationshipType: relationshipType,
+                                                                              ContactId: relationshipContactId,
+                                                                              Name: response.data.ContactName,
+                                                                              PhoneNumber: response.data.ContactPhoneNumber,
+                                });
+                            }
+                        }else {
+                            miniToastr.error('Could not add relationship', 'Error');
+                        }
+                        this.newRelationship.contactId = '';
+                        this.newRelationship.type = 'friend';
+                        return response;
+                }).catch( (error) => {
+                    miniToastr.error("Could not add relationship", 'Error');
+                    console.log(error);
+                    this.newRelationship.contactId = '';
+                    this.newRelationship.type = 'friend';
+                });
             },
             clearModal(){
                 this.selectedContact.id = '';
@@ -456,7 +568,7 @@
                     }
                 }
             },
-            matchSearchCriteria(firstName, lastName, job, address, email){
+            matchSearchCriteria(firstName, lastName, phoneNumber, job, address, email){
                 let query = this.searchEntity.searchQuery.toLowerCase();
                 switch(this.searchEntity.type){
                     case 'all':
@@ -465,6 +577,8 @@
                         return (firstName.toLowerCase()).includes(query);
                     case 'lastName':
                         return (lastName.toLowerCase()).includes(query);
+                    case 'phoneNumber':
+                        return(phoneNumber.includes(query));
                     case 'job':
                         return (job.toLowerCase()).includes(query);
                     case 'address':
@@ -490,6 +604,7 @@
         height: 15px;
         width: 15px;
     }
+
     .page-item.active .page-link {
     background-color: grey !important;
     border-color: grey !important;
@@ -507,5 +622,9 @@
 
     #searchButton{
         width: 115px;
+    }
+
+    #deleteOption{
+        padding-right: 10px;
     }
 </style>
