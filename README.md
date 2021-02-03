@@ -9,7 +9,7 @@ Your book to search, add, delete and update your contacts.
 
 2. Place it in the htdocs folder in xampp 
 
-3. For database setup, you can use the 'DatabaseSetup.sql' file
+3. For database setup, execute the 'DatabaseSetup.sql' file
 
    ​
 
