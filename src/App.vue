@@ -377,9 +377,9 @@
                     return false;
                 }
 
-                let isNum = /^\d+$/.test(this.selectedContact.newPhoneNumber);
+                let isNum = /^[+]?[0-9]+$/.test(this.selectedContact.newPhoneNumber);
                 if(!isNum){
-                    this.modalErrorMessage = 'The phone number must only include digits';
+                    this.modalErrorMessage = 'Please enter a correct phone number';
                     return;
                 }
 
