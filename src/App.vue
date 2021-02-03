@@ -8,13 +8,13 @@
 
         <div class="row">
             <div class="form-group col-md-3">
-                <input class="form-control" type="text" placeholder="First Name" v-model="newContact.FirstName" required/>
+                <input class="form-control" type="text" placeholder="First Name *" v-model="newContact.FirstName" required/>
             </div>
             <div class="form-group col-md-3">
-                <input class="form-control" type="text" placeholder="Last Name" v-model="newContact.LastName" required/>
+                <input class="form-control" type="text" placeholder="Last Name *" v-model="newContact.LastName" required/>
             </div>
             <div class="form-group col-md-3">
-                <input class="form-control" type="text" placeholder="PhoneNumber" v-model="newContact.PhoneNumber" required/>
+                <input class="form-control" type="text" placeholder="Phone Number *" v-model="newContact.PhoneNumber" required/>
             </div>
         </div>
 
@@ -26,7 +26,7 @@
                 <input class="form-control" type="text" placeholder="Job" v-model="newContact.JobTitle" required/>
             </div>
              <div class="form-group col-md-3">
-                <input class="form-control" type="text" placeholder="Email" v-model="newContact.Email" required/>
+                <input class="form-control" type="email" placeholder="Email" v-model="newContact.Email" required/>
             </div>
             <div class="col-md-3">
                 <b-button class="btn btn-primary" :disabled="addIsDisabled" v-on:click="addContact()">
@@ -82,7 +82,7 @@
                         <th class="imageColumn"></th>
                         <th>ID</th>
                         <th>Name</th>
-                        <th>PhoneNumber</th>
+                        <th>Phone Number</th>
                         <th>Email</th>
                         <th>Address</th>
                         <th>Job</th>
@@ -147,7 +147,7 @@
                  <p class="text-danger">{{modalErrorMessage}}</p>
                  <p>Change Image:</p>
                  <div class="form-group col-md-12">
-                      <input type="file" id="file" ref="file" />
+                      <input type="file" id="file" ref="file" accept="image/*"/>
                      <button class="btn btn-secondary" type="button" @click='uploadFile()'>Upload File</button>
                 </div>
                  <hr>
@@ -178,7 +178,28 @@
                  <hr>
                  <div class="row">
                      <div class="col-md-12">
-                         <b-table striped hover :items="modalRelationshipContacts"></b-table>
+                         <table v-if="this.modalRelationshipContacts.length!=0" class="table">
+                            <thead>
+                                <th>Relationship Type</th>
+                                <th>Contact ID</th>
+                                <th>Name</th>
+                                <th>Phone Number</th>
+                                <th>Actions</th>
+                            </thead>
+                            <tbody>
+                             <tr v-for="item in this.modalRelationshipContacts" v-bind:key="item.RelationshipId">
+                                 <td>{{item.RelationshipType}}</td>
+                                 <td>{{item.ContactId}}</td>
+                                 <td>{{item.Name}}</td>
+                                 <td>{{item.PhoneNumber}}</td>
+                                 <td>
+                                     <a v-on:click="deleteRelationship(item.RelationshipType, item.ContactId, selectedContact.id)">
+                                         <i class="fa fa-trash"></i>
+                                     </a>
+                                 </td>
+                             </tr>
+                            </tbody>
+                        </table>
                      </div>
                  </div>
              </b-modal>
@@ -265,12 +286,11 @@
                     return;
                 }
 
-                let isNum = /^\d+$/.test(phoneNumber);
+                let isNum = /^[+]?[0-9]+$/.test(phoneNumber);
                 if(!isNum){
-                    this.errorMessage = 'The phone number must only include digits';
+                    this.errorMessage = 'Please enter a valid phone number';
                     return;
                 }
-
 
                 this.addIsDisabled = true;
 
@@ -467,6 +487,44 @@
                    this.$refs['my-modal'].hide();
                    this.clearModal();
                    });
+            },
+            deleteRelationship(relationshipType, contactId1, contactId2){
+
+                if(!relationshipType || !contactId2 || !contactId1){
+                    miniToastr.error('Could not delete relationship', 'Error');
+                    return;
+                }
+
+                 axios({
+                    url: "http://localhost/addressbook/API/DELETERelationship.php",
+                    params: {
+                        contactId1: contactId1,
+                        contactId2: contactId2,
+                        relationshipType: relationshipType
+                    },
+                }).then(response => {
+                     if(response.statusText == 'OK') {
+                         let removeIndex = -99;
+                         for( let i = 0; i<this.modalRelationshipContacts.length; i++){
+                             if((this.modalRelationshipContacts[i].ContactId == contactId1) &&
+                                 (this.modalRelationshipContacts[i].RelationshipType == relationshipType)){
+                                 removeIndex = i;
+                             }
+                         }
+                         if(removeIndex != -99){
+                             this.modalRelationshipContacts.splice(removeIndex,1);
+                            miniToastr.success("Relationship deleted successfully", 'Success');
+                         }
+                     }else{
+                         miniToastr.error("Could not delete relationship", 'Error');
+                     }
+
+                    return response;
+
+                }).catch( (error) => {
+                    miniToastr.error("Could not delete relationship", 'Error');
+                    console.log(error);
+                });
             },
             showModal(id, name, image, oldPhoneNumber){
                 this.selectedContact.id             = id;
