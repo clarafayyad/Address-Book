@@ -15,31 +15,18 @@ if(!$id){
 require('connectToDatabase.php');
 
 //select relationship details query
-$query = "SELECT r.RelationshipId, r.RelationshipType, r.ToContactId, c.LastName, c.FirstName, c.PhoneNumber
-                                    FROM Relationship r, Contact c
-                                    WHERE r.FromContactId = ? AND 
-                                          r.ToContactId = c.ContactId ";
+$query = "SELECT r.RelationshipType, r.ToContactId as ContactId, CONCAT(c.FirstName,\" \",c.LastName) as Name, c.PhoneNumber
+          FROM Relationship r, Contact c
+          WHERE r.FromContactId = ? AND r.ToContactId = c.ContactId ";
 
 if($stmt = $mysqli->prepare($query)){
     $stmt->bind_param('i', $id);
     $stmt->execute();
-    $stmt->store_result();
-    $stmt->bind_result($relationshipId, $type, $toContactId, $toContactLastName, $toContactFirstName, $toContactPhoneNumber
-    );
+    $result = $stmt->get_result();
 
-    //prepare data for response
-    $result = array();
-    $count = 0;
-    while($stmt->fetch()){
-        $result[$count]['type'] = $type;
-        $result[$count]['ContactId'] = $toContactId;
-        $result[$count]['ContactName'] = $toContactFirstName . " " . $toContactLastName;
-        $result[$count]['ContactPhoneNumber'] = $toContactPhoneNumber;
-        $count++;
-    }
-
+    echo json_encode($result->fetch_all(MYSQLI_ASSOC));
     $mysqli->close();
-    returnMessage($result, 200);
+    http_response_code(200);
 
 }else{
     $mysqli->close();
