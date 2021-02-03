@@ -49,7 +49,7 @@ $offset          = ($pageNumber - 1) * MAX_RECORDS_PER_PAGE;
 $numberOfRecords = MAX_RECORDS_PER_PAGE;
 
 //sql query
-$mainQuery = "SELECT c.ContactId, c.FirstName, c.LastName, c.PhoneNumber, c.JobTitle, c.Email, c.Address, i.ImagePath
+$mainQuery = "SELECT c.ContactId as id, CONCAT(c.FirstName,\" \",c.LastName) as name, c.PhoneNumber as phoneNumber, c.JobTitle as job, c.Email as email, c.Address as address, i.ImagePath as imageSrc
               FROM Contact c, Image i 
               WHERE (c.ContactId = i.contactID)";
 $limitQuery = " LIMIT ?,? ";
@@ -97,8 +97,8 @@ if(!$stmt1){
 }
 
 $stmt1->execute();
-$stmt1->store_result();
-$stmt1->bind_result($contactId, $firstname, $lastname, $phoneNumber, $jobTitle, $email, $address, $image);
+$result = $stmt1->get_result();
+$data   = $result->fetch_all(MYSQLI_ASSOC);
 
 
 //count total rows for pagination
@@ -114,22 +114,9 @@ if($stmt2 = $mysqli->prepare($wholeQuery)) {
     return;
 }
 
-//prepare data for response
-$result = array();
-$count = 0;
-while($stmt1->fetch()){
-    $result[$count]['id'] = $contactId;
-    $result[$count]['name'] = $firstname . ' ' .$lastname;
-    $result[$count]['phoneNumber'] = $phoneNumber;
-    $result[$count]['email'] = $email;
-    $result[$count]['job'] = $jobTitle;
-    $result[$count]['address'] = $address;
-    $result[$count]['imageSrc'] = $image;
-    $count++;
-}
 
 $output = array(
-    'data'  => $result,
+    'data'  => $data,
     'count' =>$countRows
 );
 
